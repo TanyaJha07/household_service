@@ -9,6 +9,14 @@ app = Flask(__name__)
 def home():
     return render_template("index.html")
 
+@app.route("/signup")
+def signup():
+    return render_template("signup.html")
+
+@app.route("/signup_professional")
+def signup_professional():
+    
+    return render_template("signup_professional.html")
 # Run the app
 if __name__ == "__main__":
     app.run(debug=True)
