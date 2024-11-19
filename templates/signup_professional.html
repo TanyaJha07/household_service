@@ -43,26 +43,26 @@
       <div class="form-header">
         <h2>Service Professional Signup</h2>
       </div>
-      <form>
+      <form method="POST" action="/signup_professional" enctype="multipart/form-data">
         <!-- Email -->
         <div class="mb-3">
           <label for="email" class="form-label">Email ID (Username):</label>
-          <input type="email" class="form-control" id="email" placeholder="Enter your email" required>
+          <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
         </div>
         <!-- Password -->
         <div class="mb-3">
           <label for="password" class="form-label">Password:</label>
-          <input type="password" class="form-control" id="password" placeholder="Enter your password" required>
+          <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
         </div>
         <!-- Full Name -->
         <div class="mb-3">
-          <label for="fullname" class="form-label">Fullname:</label>
-          <input type="text" class="form-control" id="fullname" placeholder="Enter your full name" required>
+          <label for="fullname" class="form-label">Full Name:</label>
+          <input type="text" class="form-control" id="fullname" name="fullname" placeholder="Enter your full name" required>
         </div>
         <!-- Service Name -->
         <div class="mb-3">
           <label for="service" class="form-label">Service Name:</label>
-          <select class="form-select" id="service" required>
+          <select class="form-select" id="service" name="service_name" required>
             <option value="" disabled selected>Select available services</option>
             <option value="plumbing">Plumbing</option>
             <option value="electrician">Electrician</option>
@@ -72,29 +72,29 @@
         <!-- Experience -->
         <div class="mb-3">
           <label for="experience" class="form-label">Experience (in years):</label>
-          <input type="number" class="form-control" id="experience" placeholder="Enter your experience" required>
+          <input type="number" class="form-control" id="experience" name="experience_years" placeholder="Enter your experience" required>
         </div>
         <!-- Attach Documents -->
         <div class="mb-3">
           <label for="documents" class="form-label">Attach Documents (single PDF):</label>
-          <input type="file" class="form-control" id="documents" accept=".pdf" required>
+          <input type="file" class="form-control" id="documents" name="documents" accept=".pdf" required>
         </div>
         <!-- Address -->
         <div class="mb-3">
           <label for="address" class="form-label">Address:</label>
-          <textarea class="form-control" id="address" rows="3" placeholder="Enter your address" required></textarea>
+          <textarea class="form-control" id="address" name="address" rows="3" placeholder="Enter your address" required></textarea>
         </div>
         <!-- Pin Code -->
         <div class="mb-3">
           <label for="pincode" class="form-label">Pin Code:</label>
-          <input type="text" class="form-control" id="pincode" placeholder="Enter your pin code" required>
+          <input type="text" class="form-control" id="pincode" name="pin_code" placeholder="Enter your pin code" required>
         </div>
         <!-- Submit Button -->
         <div class="d-grid">
           <button type="submit" class="btn btn-primary btn-lg">Register</button>
         </div>
         <div class="text-center mt-3">
-          <a href="login.html">Login here</a>
+          <a href="login.html">Already have an account? Login here</a>
         </div>
       </form>
     </div>
