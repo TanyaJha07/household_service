@@ -64,21 +64,23 @@ def signup():
 @app.route("/signup_professional", methods=["GET", "POST"])
 def signup_professional():
     if request.method == "POST":
+        
         # Retrieve form data
         email = request.form.get("email")
         password = request.form.get("password")
         fullname = request.form.get("fullname")
-        service_name = request.form.get("service")
-        experience_years = request.form.get("experience")
+        service_name = request.form.get("service_name")
+        experience_years = request.form.get("experience_years")
         address = request.form.get("address")
-        pin_code = request.form.get("pincode")
+        pin_code = request.form.get("pin_code")
         file = request.files["documents"]
-
+        print("name")
+        print(email, password, fullname, service_name, experience_years, address, pin_code, file)
         # Validate inputs
         if not all([email, password, fullname, service_name, experience_years, address, pin_code, file]):
             flash("All fields are required.", "danger")
             return redirect(url_for("signup_professional"))
-
+        print("hi")
         # Save the uploaded document
         if file and file.filename.endswith(".pdf"):
             filename = secure_filename(file.filename)
