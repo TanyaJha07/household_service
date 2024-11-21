@@ -153,12 +153,184 @@ def login():
             session["user_id"] = user.id
             session["role"] = user.role
             flash("Login successful!", "success")
-            return redirect(url_for("home"))
+            
+            # Redirect based on user role
+            if user.role == "admin":
+                return redirect(url_for("admin_dashboard"))
+            elif user.role == "professional":
+                return redirect(url_for("professional_dashboard"))
+            else:  # customer
+                return redirect(url_for("user_dashboard"))
         else:
             flash("Invalid email or password.", "danger")
             return redirect(url_for("login"))
     
     return render_template("login.html")
+
+# Dashboard routes with role-based access control
+@app.route("/user-dashboard")
+def user_dashboard():
+    if "user_id" not in session or session["role"] != "customer":
+        flash("Please login as a customer to access this page.", "danger")
+        return redirect(url_for("login"))
+    
+    user_id = session["user_id"]
+    customer = CustomerDetails.query.filter_by(user_id=user_id).first()
+    
+    # Get all verified professionals for available services
+    services = ProfessionalDetails.query.filter_by(is_verified=True).all()
+    
+    # In a real application, you would fetch these from your database
+    recent_bookings = []  # You'll need to implement this based on your booking model
+    
+    return render_template("user_dashboard.html", 
+                         customer=customer, 
+                         services=services,
+                         recent_bookings=recent_bookings)
+
+@app.route("/professional-dashboard")
+def professional_dashboard():
+    if "user_id" not in session or session["role"] != "professional":
+        flash("Please login as a professional to access this page.", "danger")
+        return redirect(url_for("login"))
+    
+    user_id = session["user_id"]
+    professional = ProfessionalDetails.query.filter_by(user_id=user_id).first()
+    
+    # In a real application, you would fetch these from your database
+    service_requests = []  # You'll need to implement this based on your booking model
+    stats = {
+        "pending": 0,
+        "completed": 0,
+        "total": 0
+    }
+    
+    return render_template("professional_dashboard.html", 
+                         professional=professional,
+                         service_requests=service_requests,
+                         stats=stats)
+
+@app.route("/admin-dashboard")
+def admin_dashboard():
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Please login as an admin to access this page.", "danger")
+        return redirect(url_for("login"))
+    professionals = ProfessionalDetails.query.filter_by(is_verified=False).all()
+    return render_template("admin_dashboard.html", pending_professionals=professionals)
+
+@app.route("/verify-professional/<int:id>", methods=["POST"])
+def verify_professional(id):
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+    
+    professional = ProfessionalDetails.query.get_or_404(id)
+    professional.is_verified = True
+    db.session.commit()
+    flash(f"Professional {professional.fullname} has been verified.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/reject-professional/<int:id>", methods=["POST"])
+def reject_professional(id):
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+    
+    professional = ProfessionalDetails.query.get_or_404(id)
+    user = User.query.get(professional.user_id)
+    db.session.delete(professional)
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Professional application has been rejected.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/update-profile", methods=["POST"])
+def update_profile():
+    if "user_id" not in session or session["role"] != "customer":
+        flash("Please login to update your profile.", "danger")
+        return redirect(url_for("login"))
+    
+    user_id = session["user_id"]
+    customer = CustomerDetails.query.filter_by(user_id=user_id).first()
+    
+    if customer:
+        customer.fullname = request.form.get("fullname")
+        customer.address = request.form.get("address")
+        customer.pin_code = request.form.get("pin_code")
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+    else:
+        flash("Customer profile not found.", "danger")
+    
+    return redirect(url_for("user_dashboard"))
+
+@app.route("/update-professional-profile", methods=["POST"])
+def update_professional_profile():
+    if "user_id" not in session or session["role"] != "professional":
+        flash("Please login to update your profile.", "danger")
+        return redirect(url_for("login"))
+    
+    user_id = session["user_id"]
+    professional = ProfessionalDetails.query.filter_by(user_id=user_id).first()
+    
+    if professional:
+        professional.fullname = request.form.get("fullname")
+        professional.service_name = request.form.get("service_name")
+        professional.experience_years = request.form.get("experience_years")
+        professional.address = request.form.get("address")
+        professional.pin_code = request.form.get("pin_code")
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+    else:
+        flash("Professional profile not found.", "danger")
+    
+    return redirect(url_for("professional_dashboard"))
+
+@app.route("/book-service/<int:service_id>", methods=["POST"])
+def book_service(service_id):
+    if "user_id" not in session or session["role"] != "customer":
+        flash("Please login to book a service.", "danger")
+        return redirect(url_for("login"))
+    
+    professional = ProfessionalDetails.query.get_or_404(service_id)
+    customer = CustomerDetails.query.filter_by(user_id=session["user_id"]).first()
+    
+    if not professional.is_verified:
+        flash("This professional is not yet verified.", "danger")
+        return redirect(url_for("user_dashboard"))
+    
+    # Here you would typically create a booking record in your database
+    # For now, we'll just show a success message
+    flash("Service booked successfully!", "success")
+    return redirect(url_for("user_dashboard"))
+
+@app.route("/accept-request/<int:request_id>", methods=["POST"])
+def accept_request(request_id):
+    if "user_id" not in session or session["role"] != "professional":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+    
+    # Here you would typically update the request status in your database
+    flash("Request accepted successfully!", "success")
+    return redirect(url_for("professional_dashboard"))
+
+@app.route("/decline-request/<int:request_id>", methods=["POST"])
+def decline_request(request_id):
+    if "user_id" not in session or session["role"] != "professional":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+    
+    # Here you would typically update the request status in your database
+    flash("Request declined.", "success")
+    return redirect(url_for("professional_dashboard"))
+
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("login"))
 
 # Run the app
 if __name__ == "__main__":

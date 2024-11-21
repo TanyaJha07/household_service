@@ -28,3 +28,17 @@ class CustomerDetails(db.Model):
     fullname = db.Column(db.String(100), nullable=False)  # Full Name
     address = db.Column(db.Text, nullable=False)  # Address of the customer
     pin_code = db.Column(db.String(10), nullable=False)  # PIN Code for location
+
+class ServiceBooking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer_details.id'), nullable=False)
+    professional_id = db.Column(db.Integer, db.ForeignKey('professional_details.id'), nullable=False)
+    service_date = db.Column(db.Date, nullable=False)
+    service_time = db.Column(db.Time, nullable=False)
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, declined, completed
+    created_at = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+    
+    # Relationships
+    customer = db.relationship('CustomerDetails', backref=db.backref('bookings', lazy=True))
+    professional = db.relationship('ProfessionalDetails', backref=db.backref('bookings', lazy=True))
