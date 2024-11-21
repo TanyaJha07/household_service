@@ -8,7 +8,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///household_service.db"
 app.config["UPLOAD_FOLDER"] = "uploads"  # Folder to save uploaded documents
 app.secret_key = "your_secret_key"  # Needed for flash messages
 
-from models import User, ProfessionalDetails, db
+from models import CustomerDetails, User, ProfessionalDetails, db
 
 db.init_app(app)
 
@@ -23,8 +23,42 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 def home():
     return render_template("index.html")
 
-@app.route("/signup")
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
+    if request.method == "POST":
+        
+        # Retrieve form data
+        email = request.form.get("email")
+        password = request.form.get("password")
+        fullname = request.form.get("fullname")
+        address = request.form.get("address")
+        pin_code = request.form.get("pincode")
+        
+        # Validate inputs
+        if not all([email, password]):
+            flash("All fields are required.", "danger")
+            return redirect(url_for("signup"))
+
+        # Create a new user entry
+        user = User(username=email, password=password, role="customer")
+        db.session.add(user)
+        db.session.commit()
+        user=User.query.filter_by(username=email).first()
+        
+        # Create a new customer details entry
+        customer = CustomerDetails(
+            user_id=user.id,
+            email=email,
+            fullname=fullname,
+            address=address,
+            pin_code=pin_code,
+        )
+        
+        db.session.add(customer)
+        db.session.commit()
+        
+        flash("Signup successful! Please wait for admin verification.", "success")
+        return redirect(url_for("home"))
     return render_template("signup.html")
 
 @app.route("/signup_professional", methods=["GET", "POST"])
