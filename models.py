@@ -1,7 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
-
+#what is sqlalchemy?
+#  sqlachemy is a framework for creating and working with databases in Python and is a collection of tools and libraries that make it easier to work with databases in Python. it also provides a set of classes and functions that make it easier to work with databases in Python.
 db = SQLAlchemy()
-
+# db is a variable that stores an instance of the SQLAlchemy class, which is a framework for creating and working with databases in Python
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False, unique=True)
