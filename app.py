@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
+from sqlalchemy.exc import IntegrityError
 
 # Create an instance of the Flask class
 app = Flask(__name__)
@@ -39,26 +40,36 @@ def signup():
             flash("All fields are required.", "danger")
             return redirect(url_for("signup"))
 
-        # Create a new user entry
-        user = User(username=email, password=password, role="customer")
-        db.session.add(user)
-        db.session.commit()
-        user=User.query.filter_by(username=email).first()
-        
-        # Create a new customer details entry
-        customer = CustomerDetails(
-            user_id=user.id,
-            email=email,
-            fullname=fullname,
-            address=address,
-            pin_code=pin_code,
-        )
-        
-        db.session.add(customer)
-        db.session.commit()
-        
-        flash("Signup successful! Please wait for admin verification.", "success")
-        return redirect(url_for("home"))
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=email).first()
+        if existing_user:
+            flash("Email already registered. Please use a different email or login.", "danger")
+            return redirect(url_for("signup"))
+
+        try:
+            # Create a new user entry
+            user = User(username=email, password=password, role="customer")
+            db.session.add(user)
+            db.session.commit()
+
+            # Create a new customer details entry
+            customer = CustomerDetails(
+                user_id=user.id,
+                email=email,
+                fullname=fullname,
+                address=address,
+                pin_code=pin_code,
+            )
+            
+            db.session.add(customer)
+            db.session.commit()
+            
+            flash("Signup successful! Please wait for admin verification.", "success")
+            return redirect(url_for("home"))
+        except IntegrityError:
+            db.session.rollback()
+            flash("An error occurred. Please try again.", "danger")
+            return redirect(url_for("signup"))
     return render_template("signup.html")
 
 @app.route("/signup_professional", methods=["GET", "POST"])
@@ -74,43 +85,53 @@ def signup_professional():
         address = request.form.get("address")
         pin_code = request.form.get("pin_code")
         file = request.files["documents"]
-        print("name")
-        print(email, password, fullname, service_name, experience_years, address, pin_code, file)
+        
         # Validate inputs
         if not all([email, password, fullname, service_name, experience_years, address, pin_code, file]):
             flash("All fields are required.", "danger")
             return redirect(url_for("signup_professional"))
-        print("hi")
-        # Save the uploaded document
-        if file and file.filename.endswith(".pdf"):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(file_path)
-        else:
-            flash("Please upload a valid PDF document.", "danger")
+
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=email).first()
+        if existing_user:
+            flash("Email already registered. Please use a different email or login.", "danger")
             return redirect(url_for("signup_professional"))
 
-        # Create a new user entry
-        user = User(username=email, password=password, role="professional")
-        db.session.add(user)
-        db.session.commit()
+        try:
+            # Save the uploaded document
+            if file and file.filename.endswith(".pdf"):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                file.save(file_path)
+            else:
+                flash("Please upload a valid PDF document.", "danger")
+                return redirect(url_for("signup_professional"))
 
-        # Create a new professional details entry
-        professional = ProfessionalDetails(
-            user_id=user.id,
-            email=email,
-            fullname=fullname,
-            service_name=service_name,
-            experience_years=int(experience_years),
-            document_path=file_path,
-            address=address,
-            pin_code=pin_code,
-        )
-        db.session.add(professional)
-        db.session.commit()
+            # Create a new user entry
+            user = User(username=email, password=password, role="professional")
+            db.session.add(user)
+            db.session.commit()
 
-        flash("Professional signup successful! Please wait for admin verification.", "success")
-        return redirect(url_for("home"))
+            # Create a new professional details entry
+            professional = ProfessionalDetails(
+                user_id=user.id,
+                email=email,
+                fullname=fullname,
+                service_name=service_name,
+                experience_years=int(experience_years),
+                document_path=file_path,
+                address=address,
+                pin_code=pin_code,
+            )
+            db.session.add(professional)
+            db.session.commit()
+
+            flash("Professional signup successful! Please wait for admin verification.", "success")
+            return redirect(url_for("home"))
+        except IntegrityError:
+            db.session.rollback()
+            flash("An error occurred. Please try again.", "danger")
+            return redirect(url_for("signup_professional"))
 
     return render_template("signup_professional.html")
 
