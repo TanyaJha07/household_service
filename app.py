@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 
@@ -134,6 +134,31 @@ def signup_professional():
             return redirect(url_for("signup_professional"))
 
     return render_template("signup_professional.html")
+
+# Define a route for login
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        # Validate inputs
+        if not all([email, password]):
+            flash("Please enter both email and password.", "danger")
+            return redirect(url_for("login"))
+        
+        # Check if user exists and password is correct
+        user = User.query.filter_by(username=email).first()
+        if user and user.password == password:  # In production, use proper password hashing
+            session["user_id"] = user.id
+            session["role"] = user.role
+            flash("Login successful!", "success")
+            return redirect(url_for("home"))
+        else:
+            flash("Invalid email or password.", "danger")
+            return redirect(url_for("login"))
+    
+    return render_template("login.html")
 
 # Run the app
 if __name__ == "__main__":
