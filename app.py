@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 
@@ -331,6 +331,9 @@ def decline_request(request_id):
     flash("Request declined.", "success")
     return redirect(url_for("professional_dashboard"))
 
+@app.route('/uploads/<path:filename>')
+def serve_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route("/logout")
