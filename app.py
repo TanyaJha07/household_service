@@ -338,6 +338,25 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
+from models import Service
+@app.route('/search_services')
+def search_services():
+    service_name = request.args.get('service_name', '').strip()
+    pin_code = request.args.get('pin_code', '').strip()
+    
+    query = Service.query
+    
+    if service_name:
+        query = query.filter(Service.name.ilike(f'%{service_name}%'))
+    
+    if pin_code:
+        query = query.filter(Service.location_pin_code == pin_code)
+    
+    services = query.all()
+    
+    return render_template('search_results.html', services=services)
+
+
 # Run the app
 if __name__ == "__main__":
     with app.app_context():
