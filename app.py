@@ -122,6 +122,7 @@ def signup_professional():
                 document_path=file_path,
                 address=address,
                 pin_code=pin_code,
+                status='pending'
             )
             db.session.add(professional)
             db.session.commit()
@@ -139,8 +140,6 @@ def create_admin():
     admin = User(username="admin@gmail.com", password="admin123", role="admin")
     db.session.add(admin)
     db.session.commit()
-
-
 
 # Define a route for login
 @app.route("/login", methods=["GET", "POST"])
@@ -185,7 +184,7 @@ def user_dashboard():
     customer = CustomerDetails.query.filter_by(user_id=user_id).first()
     
     # Get all verified professionals for available services
-    services = ProfessionalDetails.query.filter_by(is_verified=True).all()
+    services = ProfessionalDetails.query.filter_by(status='verified').all()
     
     # In a real application, you would fetch these from your database
     recent_bookings = []  # You'll need to implement this based on your booking model
@@ -222,7 +221,7 @@ def admin_dashboard():
     if "user_id" not in session or session["role"] != "admin":
         flash("Please login as an admin to access this page.", "danger")
         return redirect(url_for("login"))
-    professionals = ProfessionalDetails.query.filter_by(is_verified=False).all()
+    professionals = ProfessionalDetails.query.filter_by(status='pending').all()
     return render_template("admin_dashboard.html", pending_professionals=professionals)
 
 @app.route("/verify-professional/<int:id>", methods=["POST"])
@@ -232,7 +231,7 @@ def verify_professional(id):
         return redirect(url_for("login"))
     
     professional = ProfessionalDetails.query.get_or_404(id)
-    professional.is_verified = True
+    professional.status = 'verified'
     db.session.commit()
     flash(f"Professional {professional.fullname} has been verified.", "success")
     return redirect(url_for("admin_dashboard"))
@@ -244,9 +243,7 @@ def reject_professional(id):
         return redirect(url_for("login"))
     
     professional = ProfessionalDetails.query.get_or_404(id)
-    user = User.query.get(professional.user_id)
-    db.session.delete(professional)
-    db.session.delete(user)
+    professional.status = 'rejected'
     db.session.commit()
     flash(f"Professional application has been rejected.", "success")
     return redirect(url_for("admin_dashboard"))
@@ -302,7 +299,7 @@ def book_service(service_id):
     professional = ProfessionalDetails.query.get_or_404(service_id)
     customer = CustomerDetails.query.filter_by(user_id=session["user_id"]).first()
     
-    if not professional.is_verified:
+    if not professional.status == 'verified':
         flash("This professional is not yet verified.", "danger")
         return redirect(url_for("user_dashboard"))
     
@@ -334,7 +331,6 @@ def decline_request(request_id):
 @app.route('/uploads/<path:filename>')
 def serve_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 
 @app.route("/logout")
 def logout():

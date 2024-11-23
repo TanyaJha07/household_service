@@ -19,7 +19,7 @@ class ProfessionalDetails(db.Model):
     document_path = db.Column(db.String(200), nullable=False)  # Path to uploaded document
     address = db.Column(db.Text, nullable=False)  # Address of the professional
     pin_code = db.Column(db.String(10), nullable=False)  # PIN Code for location
-    is_verified = db.Column(db.Boolean, default=False)  # Indicates if admin verified the professional
+    status = db.Column(db.String(20), nullable=False, default='pending')  # Status can be: pending, verified, rejected
 
 class CustomerDetails(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # Unique ID for each customer
