@@ -9,7 +9,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///household_service.db"
 app.config["UPLOAD_FOLDER"] = "uploads"  # Folder to save uploaded documents
 app.secret_key = "your_secret_key"  # Needed for flash messages
 
-from models import CustomerDetails, User, ProfessionalDetails, db
+from models import CustomerDetails, User, ProfessionalDetails, db, Service, ServiceBooking
 
 db.init_app(app)
 
@@ -183,11 +183,17 @@ def user_dashboard():
     user_id = session["user_id"]
     customer = CustomerDetails.query.filter_by(user_id=user_id).first()
     
-    # Get all verified professionals for available services
-    services = ProfessionalDetails.query.filter_by(status='verified').all()
+    # Get services from verified professionals
+    services = Service.query.join(Service.professional).filter(
+        ProfessionalDetails.status == 'verified'
+    ).all()
     
-    # In a real application, you would fetch these from your database
-    recent_bookings = []  # You'll need to implement this based on your booking model
+    # Get recent bookings for the customer
+    recent_bookings = ServiceBooking.query.filter_by(
+        customer_id=customer.id
+    ).order_by(
+        ServiceBooking.created_at.desc()
+    ).limit(5).all()
     
     return render_template("user_dashboard.html", 
                          customer=customer, 
@@ -338,24 +344,40 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
-from models import Service
 @app.route('/search_services')
 def search_services():
-    service_name = request.args.get('service_name', '').strip()
-    pin_code = request.args.get('pin_code', '').strip()
-    
-    query = Service.query
-    
-    if service_name:
-        query = query.filter(Service.name.ilike(f'%{service_name}%'))
-    
-    if pin_code:
-        query = query.filter(Service.location_pin_code == pin_code)
-    
-    services = query.all()
-    
-    return render_template('search_results.html', services=services)
+    if not session.get('user_id'):
+        flash('Please login to search services.', 'warning')
+        return redirect(url_for('login'))
 
+    query = request.args.get('query', '').strip()
+    pin_code = request.args.get('pin_code', '').strip()
+
+    # Base query
+    services_query = Service.query
+
+    # Apply search filters
+    if query:
+        services_query = services_query.filter(
+            db.or_(
+                Service.name.ilike(f'%{query}%'),
+                Service.description.ilike(f'%{query}%')
+            )
+        )
+    
+    # Filter by PIN code if provided
+    if pin_code:
+        services_query = services_query.filter(Service.location_pin_code == pin_code)
+
+    # Get verified professionals only
+    services_query = services_query.join(Service.professional).filter(
+        ProfessionalDetails.status == 'verified'
+    )
+
+    # Execute query and get results
+    services = services_query.all()
+
+    return render_template('search_results.html', services=services, query=query, pin_code=pin_code)
 
 # Run the app
 if __name__ == "__main__":
