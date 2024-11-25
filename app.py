@@ -9,7 +9,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///household_service.db"
 app.config["UPLOAD_FOLDER"] = "uploads"  # Folder to save uploaded documents
 app.secret_key = "your_secret_key"  # Needed for flash messages
 
-from models import CustomerDetails, User, ProfessionalDetails, db, Service, ServiceBooking
+from models import CustomerDetails, User, ProfessionalDetails, db, Service, ServiceBooking, BaseService
 
 db.init_app(app)
 
@@ -75,73 +75,75 @@ def signup():
 @app.route("/signup_professional", methods=["GET", "POST"])
 def signup_professional():
     if request.method == "POST":
-        
-        # Retrieve form data
-        email = request.form.get("email")
-        password = request.form.get("password")
-        fullname = request.form.get("fullname")
-        service_name = request.form.get("service_name")
-        experience_years = request.form.get("experience_years")
-        address = request.form.get("address")
-        pin_code = request.form.get("pin_code")
-        file = request.files["documents"]
-        
-        # Validate inputs
-        if not all([email, password, fullname, service_name, experience_years, address, pin_code, file]):
-            flash("All fields are required.", "danger")
-            return redirect(url_for("signup_professional"))
-
-        # Check if username already exists
-        existing_user = User.query.filter_by(username=email).first()
-        if existing_user:
-            flash("Email already registered. Please use a different email or login.", "danger")
-            return redirect(url_for("signup_professional"))
-
         try:
+            # Retrieve form data
+            email = request.form.get("email")
+            password = request.form.get("password")
+            fullname = request.form.get("fullname")
+            service_id = request.form.get("service_id")
+            experience_years = request.form.get("experience_years")
+            address = request.form.get("address")
+            pin_code = request.form.get("pin_code")
+            file = request.files["documents"]
+            
+            # Validate inputs
+            if not all([email, password, fullname, service_id, experience_years, address, pin_code, file]):
+                flash("All fields are required.", "danger")
+                return redirect(url_for("signup_professional"))
+
+            # Check if username already exists
+            existing_user = User.query.filter_by(username=email).first()
+            if existing_user:
+                flash("Email already registered. Please use a different email or login.", "danger")
+                return redirect(url_for("signup_professional"))
+
+            # Verify if service exists
+            service = BaseService.query.get(service_id)
+            if not service:
+                flash("Invalid service selected.", "danger")
+                return redirect(url_for("signup_professional"))
+
             # Save the uploaded document
-            if file and file.filename.endswith(".pdf"):
+            if file:
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
                 file.save(file_path)
             else:
-                flash("Please upload a valid PDF document.", "danger")
+                flash("Document upload is required.", "danger")
                 return redirect(url_for("signup_professional"))
 
             # Create a new user entry
             user = User(username=email, password=password, role="professional")
             db.session.add(user)
-            db.session.commit()
+            db.session.flush()  # Get the user ID without committing
 
             # Create a new professional details entry
             professional = ProfessionalDetails(
                 user_id=user.id,
                 email=email,
                 fullname=fullname,
-                service_name=service_name,
+                service_id=service_id,
                 experience_years=int(experience_years),
                 document_path=file_path,
                 address=address,
-                pin_code=pin_code,
-                status='pending'
+                pin_code=pin_code
             )
+            
             db.session.add(professional)
             db.session.commit()
-
+            
             flash("Professional signup successful! Please wait for admin verification.", "success")
             return redirect(url_for("home"))
-        except IntegrityError:
+
+        except Exception as e:
             db.session.rollback()
-            flash("An error occurred. Please try again.", "danger")
+            flash(f"An error occurred: {str(e)}", "danger")
             return redirect(url_for("signup_professional"))
 
-    return render_template("signup_professional.html")
+    # GET request - show available services
+    services = BaseService.query.all()
+    return render_template("signup_professional.html", services=services)
 
-def create_admin():
-    admin = User(username="admin@gmail.com", password="admin123", role="admin")
-    db.session.add(admin)
-    db.session.commit()
-
-# Define a route for login
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -224,11 +226,19 @@ def professional_dashboard():
 
 @app.route("/admin-dashboard")
 def admin_dashboard():
-    if "user_id" not in session or session["role"] != "admin":
-        flash("Please login as an admin to access this page.", "danger")
-        return redirect(url_for("login"))
-    professionals = ProfessionalDetails.query.filter_by(status='pending').all()
-    return render_template("admin_dashboard.html", pending_professionals=professionals)
+    # if "user_id" not in session or session["role"] != "admin":
+    #     flash("Please login as admin to access this page.", "danger")
+    #     return redirect(url_for("login"))
+    
+    # Get pending professional verifications
+    pending_professionals = ProfessionalDetails.query.filter_by(status='pending').all()
+    
+    # Get all base services
+    services = BaseService.query.order_by(BaseService.name).all()
+    
+    return render_template("admin_dashboard.html", 
+                         pending_professionals=pending_professionals,
+                         services=services)
 
 @app.route("/verify-professional/<int:id>", methods=["POST"])
 def verify_professional(id):
@@ -344,6 +354,7 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
+# Corrected search_services route
 @app.route('/search_services')
 def search_services():
     if not session.get('user_id'):
@@ -367,10 +378,10 @@ def search_services():
     
     # Filter by PIN code if provided
     if pin_code:
-        services_query = services_query.filter(Service.location_pin_code == pin_code)
+        services_query = services_query.filter(BaseService.location_pin_code == pin_code)
 
     # Get verified professionals only
-    services_query = services_query.join(Service.professional).filter(
+    services_query = services_query.join(ProfessionalDetails).filter(
         ProfessionalDetails.status == 'verified'
     )
 
@@ -378,6 +389,70 @@ def search_services():
     services = services_query.all()
 
     return render_template('search_results.html', services=services, query=query, pin_code=pin_code)
+
+# Service Management Routes
+@app.route("/add-service", methods=["POST"])
+def add_service():
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Access denied.", "danger")
+        return redirect(url_for("login"))
+    
+    name = request.form.get("name")
+    description = request.form.get("description")
+    price = float(request.form.get("price"))
+    
+    try:
+        service = BaseService(
+            name=name,
+            description=description,
+            price=price
+        )
+        db.session.add(service)
+        db.session.commit()
+        flash("Service added successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error adding service. Please try again.", "danger")
+    
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/edit-service/<int:id>", methods=["POST"])
+def edit_service(id):
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Access denied.", "danger")
+        return redirect(url_for("login"))
+    
+    service = BaseService.query.get_or_404(id)
+    
+    try:
+        service.name = request.form.get("name")
+        service.description = request.form.get("description")
+        service.base_price = float(request.form.get("price"))
+        db.session.commit()
+        flash("Service updated successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error updating service. Please try again.", "danger")
+    
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/delete-service/<int:id>", methods=["POST"])
+def delete_service(id):
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Access denied.", "danger")
+        return redirect(url_for("login"))
+    
+    service = BaseService.query.get_or_404(id)
+    
+    try:
+        db.session.delete(service)
+        db.session.commit()
+        flash("Service deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error deleting service. Please try again.", "danger")
+    
+    return redirect(url_for("admin_dashboard"))
 
 # Run the app
 if __name__ == "__main__":
