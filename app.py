@@ -19,6 +19,12 @@ with app.app_context():
 # Ensure the upload folder exists
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
+
+def create_admin():
+    admin = User(username="admin@gmail.com", password="admin123", role="admin")
+    db.session.add(admin)
+    db.session.commit()
+
 # Define a route for professional signup
 @app.route("/")
 def home():
