@@ -246,6 +246,33 @@ def admin_dashboard():
                          pending_professionals=pending_professionals,
                          services=services)
 
+@app.route("/all_users")
+def all_users():
+    if "user_id" not in session or session["role"] != "admin":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+    
+    # users = User.query.all()
+    users = User.query.filter(User.role != 'admin').all()
+    return render_template("all_users.html", users=users)
+@app.route('/restrict_user/<int:user_id>', methods=['POST'])
+def restrict_user_route(user_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('login'))
+    restrict_user(user_id)
+    flash("User restricted successfully.", "success")
+    return redirect(url_for('all_users'))
+
+@app.route('/unrestrict_user/<int:user_id>', methods=['POST'])
+def unrestrict_user_route(user_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('login'))
+    unrestrict_user(user_id)
+    flash("User unrestricted successfully.", "success")
+    return redirect(url_for('all_users'))
+
 @app.route("/verify-professional/<int:id>", methods=["POST"])
 def verify_professional(id):
     if "user_id" not in session or session["role"] != "admin":

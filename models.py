@@ -4,12 +4,12 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class User(db.Model):
-    # model is a class that represents a table in the database and is used to define the structure of the table
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False, unique=True)
     password = db.Column(db.String(120), nullable=False)
     role = db.Column(db.String(20), nullable=False)  # admin, customer, professional
-    
+    is_active = db.Column(db.Boolean, default=True)  # True means user is active, False means restricted
+ 
 class ProfessionalDetails(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
