@@ -75,15 +75,15 @@
           <input type="text" class="form-control" id="fullname" name="fullname" placeholder="Enter your full name" required>
         </div>
         <!-- Service Name -->
-        <div class="mb-3">
-          <label for="service" class="form-label">Service Name:</label>
-          <select class="form-select" id="service" name="service_id" required>
-            <option value="" disabled selected>Select available services</option>
-            <option value="1">House Cleaning</option>
-            <option value="2">Plumbing</option>
-            <option value="3">Electrical</option>
-          </select>
-        </div>
+            <div class="mb-3">
+              <label for="service" class="form-label">Service Name:</label>
+              <select class="form-select" id="service" name="service_id" required>
+                <option value="" disabled selected>Select available services</option>
+                {% for service in services %}
+                <option value="{{ service.id }}">{{ service.name }}</option>
+                {% endfor %}
+                              </select>
+            </div>
         <!-- Experience -->
         <div class="mb-3">
           <label for="experience" class="form-label">Experience (in years):</label>

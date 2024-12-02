@@ -23,7 +23,99 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 def create_admin():
     admin = User(username="admin@gmail.com", password="admin123", role="admin")
     db.session.add(admin)
-    db.session.commit()
+    db.session.flush()  # Get the admin ID
+
+    # add 3 base services
+    base_services = [
+        {"name": "Plumber", "description": "Plumbing services", "price": 200.00},
+        {"name": "Electrician", "description": "Electrical services", "price": 300.00},
+        {"name": "Carpenter", "description": "Woodworking services", "price": 150.00}
+    ]
+    service_map = {}  # To store service name to ID mapping
+    for service in base_services:
+        base_service = BaseService(name=service["name"], description=service["description"], price=service["price"])
+        db.session.add(base_service)
+        db.session.flush()  # Get the service ID
+        service_map[service["name"]] = base_service.id
+
+    # add 2 professionals with their user accounts
+    professionals = [
+        {
+            "email": "pro1@gmail.com",
+            "password": "123",
+            "fullname": "Professional 1",
+            "service_name": "Plumber",
+            "experience_years": 5,
+            "address": "123 Main Street",
+            "pin_code": "12345"
+        },
+        {
+            "email": "pro2@gmail.com",
+            "password": "123",
+            "fullname": "Professional 2",
+            "service_name": "Electrician",
+            "experience_years": 3,
+            "address": "456 Main Street",
+            "pin_code": "67890"
+        }
+    ]
+    for professional in professionals:
+        # Create user account
+        user = User(username=professional["email"], password=professional["password"], role="professional")
+        db.session.add(user)
+        db.session.flush()  # Get the user ID
+
+        # Create professional details
+        professional_details = ProfessionalDetails(
+            user_id=user.id,
+            email=professional["email"],
+            fullname=professional["fullname"],
+            service_id=service_map[professional["service_name"]],
+            experience_years=professional["experience_years"],
+            address=professional["address"],
+            pin_code=professional["pin_code"],
+            document_path="dummy_path.pdf"  # Add a dummy document path
+        )
+        db.session.add(professional_details)
+
+    # add 2 customers with their user accounts
+    customers = [
+        {
+            "email": "cust1@gmail.com",
+            "password": "123",
+            "fullname": "Customer 1",
+            "address": "123 Main Street",
+            "pin_code": "12345"
+        },
+        {
+            "email": "cust2@gmail.com",
+            "password": "123",
+            "fullname": "Customer 2",
+            "address": "456 Main Street",
+            "pin_code": "67890"
+        }
+    ]
+    for customer in customers:
+        # Create user account
+        user = User(username=customer["email"], password=customer["password"], role="customer")
+        db.session.add(user)
+        db.session.flush()  # Get the user ID
+
+        # Create customer details
+        customer_details = CustomerDetails(
+            user_id=user.id,
+            email=customer["email"],
+            fullname=customer["fullname"],
+            address=customer["address"],
+            pin_code=customer["pin_code"]
+        )
+        db.session.add(customer_details)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating admin and initial data: {str(e)}")
 
 # Define a route for professional signup
 @app.route("/")
