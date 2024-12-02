@@ -433,7 +433,7 @@ def edit_service(id):
     try:
         service.name = request.form.get("name")
         service.description = request.form.get("description")
-        service.base_price = float(request.form.get("price"))
+        service.price = float(request.form.get("price"))
         db.session.commit()
         flash("Service updated successfully!", "success")
     except Exception as e:
