@@ -347,22 +347,61 @@ def all_users():
     # users = User.query.all()
     users = User.query.filter(User.role != 'admin').all()
     return render_template("all_users.html", users=users)
+# @app.route('/restrict_user/<int:user_id>', methods=['POST'])
+# def restrict_user_route(user_id):
+#     if 'user_id' not in session or session['role'] != 'admin':
+#         flash("Unauthorized access.", "danger")
+#         return redirect(url_for('login'))
+#         # Get the user by ID or return 404 if not found
+#     user = User.query.get_or_404(user_id)
+    
+#     # Restrict the user
+#     user.is_active = False
+#     db.session.commit()
+#     # restrict_user(user_id)
+#     # user = User.query.get_or_404(id)
+#     # user.status = 'verified'
+#     # db.session.commit()
+#     flash("User restricted successfully.", "success")
+#     return redirect(url_for('all_users'))
+
+# @app.route('/unrestrict_user/<int:user_id>', methods=['POST'])
+# def unrestrict_user_route(user_id):
+#     if 'user_id' not in session or session['role'] != 'admin':
+#         flash("Unauthorized access.", "danger")
+#         return redirect(url_for('login'))
+#     unrestrict_user(user_id)
+#     flash("User unrestricted successfully.", "success")
+#     return redirect(url_for('all_users'))
 @app.route('/restrict_user/<int:user_id>', methods=['POST'])
 def restrict_user_route(user_id):
     if 'user_id' not in session or session['role'] != 'admin':
         flash("Unauthorized access.", "danger")
         return redirect(url_for('login'))
-    restrict_user(user_id)
-    flash("User restricted successfully.", "success")
+    
+    user = User.query.get_or_404(user_id)
+    if user.is_active:
+        user.is_active = False
+        db.session.commit()
+        flash("User restricted successfully.", "success")
+    else:
+        flash("User is already restricted.", "info")
     return redirect(url_for('all_users'))
+
 
 @app.route('/unrestrict_user/<int:user_id>', methods=['POST'])
 def unrestrict_user_route(user_id):
     if 'user_id' not in session or session['role'] != 'admin':
         flash("Unauthorized access.", "danger")
         return redirect(url_for('login'))
-    unrestrict_user(user_id)
-    flash("User unrestricted successfully.", "success")
+    
+    user = User.query.get_or_404(user_id)
+    if not user.is_active:
+        user.is_active = True
+        db.session.commit()
+        flash("User unrestricted successfully.", "success")
+    else:
+        flash("User is already active.", "info")
     return redirect(url_for('all_users'))
 
 @app.route("/verify-professional/<int:id>", methods=["POST"])

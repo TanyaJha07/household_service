@@ -37,14 +37,18 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if user.is_active %}
-                                        <form action="{{ url_for('restrict_user_route', user_id=user.id) }}" method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-danger btn-sm">Restrict</button>
-                                        </form>
+                                        {% if session['user_id'] != user.id %} <!-- Prevent self-restriction -->
+                                            {% if user.is_active %}
+                                            <form action="{{ url_for('restrict_user_route', user_id=user.id) }}" method="post" style="display:inline;">
+                                                <button type="submit" class="btn btn-danger btn-sm">Restrict</button>
+                                            </form>
+                                            {% else %}
+                                            <form action="{{ url_for('unrestrict_user_route', user_id=user.id) }}" method="post" style="display:inline;">
+                                                <button type="submit" class="btn btn-success btn-sm">Unrestrict</button>
+                                            </form>
+                                            {% endif %}
                                         {% else %}
-                                        <form action="{{ url_for('unrestrict_user_route', user_id=user.id) }}" method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-success btn-sm">Unrestrict</button>
-                                        </form>
+                                            <span class="text-muted">No Actions Available</span>
                                         {% endif %}
                                     </td>
                                 </tr>
