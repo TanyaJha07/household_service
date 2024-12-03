@@ -300,6 +300,28 @@ def user_dashboard():
                          services=services,
                          recent_bookings=recent_bookings)
 
+# @app.route("/professional-dashboard")
+# def professional_dashboard():
+#     if "user_id" not in session or session["role"] != "professional":
+#         flash("Please login as a professional to access this page.", "danger")
+#         return redirect(url_for("login"))
+    
+#     user_id = session["user_id"]
+#     professional = ProfessionalDetails.query.filter_by(user_id=user_id).first()
+    
+#     # In a real application, you would fetch these from your database
+#     service_requests = []  # You'll need to implement this based on your booking model
+#     stats = {
+#         "pending": 0,
+#         "completed": 0,
+#         "total": 0
+#     }
+    
+#     return render_template("professional_dashboard.html", 
+#                          professional=professional,
+#                          service_requests=service_requests,
+#                          stats=stats)
+
 @app.route("/professional-dashboard")
 def professional_dashboard():
     if "user_id" not in session or session["role"] != "professional":
@@ -309,18 +331,28 @@ def professional_dashboard():
     user_id = session["user_id"]
     professional = ProfessionalDetails.query.filter_by(user_id=user_id).first()
     
-    # In a real application, you would fetch these from your database
-    service_requests = []  # You'll need to implement this based on your booking model
+    # Fetch service requests (bookings) related to this professional
+    service_requests = ServiceBooking.query.filter_by(professional_id=professional.id).order_by(
+        ServiceBooking.created_at.desc()
+    ).all()
+    
+    # Update stats for the professional dashboard
     stats = {
-        "pending": 0,
-        "completed": 0,
-        "total": 0
+        "pending": ServiceBooking.query.filter_by(professional_id=professional.id, status="pending").count(),
+        "completed": ServiceBooking.query.filter_by(professional_id=professional.id, status="completed").count(),
+        "total": ServiceBooking.query.filter_by(professional_id=professional.id).count(),
     }
     
-    return render_template("professional_dashboard.html", 
-                         professional=professional,
-                         service_requests=service_requests,
-                         stats=stats)
+    return render_template(
+        "professional_dashboard.html",
+        professional=professional,
+        service_requests=service_requests,
+        stats=stats
+    )
+
+
+
+
 
 @app.route("/admin-dashboard")
 def admin_dashboard():
@@ -347,32 +379,7 @@ def all_users():
     # users = User.query.all()
     users = User.query.filter(User.role != 'admin').all()
     return render_template("all_users.html", users=users)
-# @app.route('/restrict_user/<int:user_id>', methods=['POST'])
-# def restrict_user_route(user_id):
-#     if 'user_id' not in session or session['role'] != 'admin':
-#         flash("Unauthorized access.", "danger")
-#         return redirect(url_for('login'))
-#         # Get the user by ID or return 404 if not found
-#     user = User.query.get_or_404(user_id)
-    
-#     # Restrict the user
-#     user.is_active = False
-#     db.session.commit()
-#     # restrict_user(user_id)
-#     # user = User.query.get_or_404(id)
-#     # user.status = 'verified'
-#     # db.session.commit()
-#     flash("User restricted successfully.", "success")
-#     return redirect(url_for('all_users'))
 
-# @app.route('/unrestrict_user/<int:user_id>', methods=['POST'])
-# def unrestrict_user_route(user_id):
-#     if 'user_id' not in session or session['role'] != 'admin':
-#         flash("Unauthorized access.", "danger")
-#         return redirect(url_for('login'))
-#     unrestrict_user(user_id)
-#     flash("User unrestricted successfully.", "success")
-#     return redirect(url_for('all_users'))
 @app.route('/restrict_user/<int:user_id>', methods=['POST'])
 def restrict_user_route(user_id):
     if 'user_id' not in session or session['role'] != 'admin':
